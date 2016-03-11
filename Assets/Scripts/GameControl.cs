@@ -34,6 +34,15 @@ public class GameControl : MonoBehaviour {
 	
 	}
 
+    void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.Escape) && currentStep == TurnStep.target)
+        {
+            //they hit escape, they want to cancel a move that they are targeting with
+            CancelSkill();
+        }
+    }
+
     //
     //GET AND SET COMMANDS
     //
@@ -121,7 +130,7 @@ public class GameControl : MonoBehaviour {
         //put the outline effect on the current character
         HighlightCharacter();
         //call the turn starting stuff from the character
-        currentCharacter.MyTurn();
+        StartCoroutine(currentCharacter.StartMyTurn());
         //Debug.Log("Beginning turn "+currentTurn.ToString());
     }
 
@@ -131,17 +140,18 @@ public class GameControl : MonoBehaviour {
         FindSkills();
         //then we update the UI
         gui.SetSkillButtons();
-        Debug.Log("Selecting Skill...");
+        //Debug.Log("Selecting Skill...");
     }
 
     void SelectTarget()
     {
-        Debug.Log("Selecting Target...");
+        //Debug.Log("Selecting Target...");
     }
 
     void EndTurn()
     {
-        Debug.Log("Ending turn " + currentTurn.ToString());
+        //Debug.Log("Ending turn " + currentTurn.ToString());
+        StartCoroutine(currentCharacter.EndMyTurn());        
     }
 
     //
@@ -153,21 +163,25 @@ public class GameControl : MonoBehaviour {
         //called when the user hits a button during the proper step
         //use the skill from the list in the proper spot
         if(currentStep != TurnStep.skill) { return; }
-        try
+        //have the character use the skill, check to see if they can
+        if (currentCharacter.SelectSkill(skillNumber))
         {
-            Debug.Log(currentCharacter.Name + " used " + currentSkills[skillNumber].Name);
-            //have the character use the skill, check to see if they can
-            currentCharacter.SelectSkill(skillNumber);
-            //everything worked out, so we set that to the skill being used
+           //everything worked out, so we set that to the skill being used
             skillBeingUsed = currentSkills[skillNumber];
             //move to the next step
             NextStep();
         }
-        catch
+        else
         {
-            Debug.Log(currentCharacter.Name + " does not have that skill.");
+            Debug.Log("You can't use that right now...");
         }
-        
+    }
+
+    void CancelSkill()
+    {
+        //use this when the player decides they did not mean to use that skill
+        skillBeingUsed = null;
+        currentStep = TurnStep.skill;
     }
 
     void FindSkills()
@@ -312,6 +326,7 @@ public class GameControl : MonoBehaviour {
                 if (attacker == target)
                 {
                     //Debug.Log("target... success");
+                    targets.Add(attacker);
                     success = true;
                 }
                 else
@@ -341,7 +356,7 @@ public class GameControl : MonoBehaviour {
             //hit everyone that was targetted
             foreach(Character t in targets)
             {
-                t.AsTarget(attacker, skillBeingUsed);
+                StartCoroutine(t.AsTarget(attacker, skillBeingUsed));
             }
             NextStep();
         }
