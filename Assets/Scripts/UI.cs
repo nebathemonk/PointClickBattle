@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class UI : MonoBehaviour {
 
@@ -31,9 +32,22 @@ public class UI : MonoBehaviour {
 	void Update () {
 
         stepText.text = "Current Step: " + GC.GetStep().ToString();
-        turnText.text = "Current Turn: " + GC.GetTurn().ToString();
+        //turnText.text = "Current Turn: " + GC.GetTurn().ToString();
+        turnListUpdate();
 	
 	}
+
+    void turnListUpdate()
+    {
+        string turns = "";
+        List<Character> turnList = GC.GetTurnList();
+        foreach(Character c in turnList)
+        {
+            turns += c.Name+"\n";
+        }
+
+        turnText.text = "Turn List: \n" + turns;
+    }
 
     public void SetSkillButtons()
     {

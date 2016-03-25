@@ -6,39 +6,109 @@ using System.Collections.Generic;
 public class Character : MonoBehaviour {
 
     GameControl GC;
+
+    AudioSource IdleSound;
+    AudioSource HurtSound;
+    AudioSource BuffSound;
+
     Text healthText;
     Text staminaText;
+    Text attackText;
+    Text defenseText;
+    Text accuracyText;
+    Text evasionText;
+    Text speedText;
 
-    public bool isAlive;
+    [SerializeField]
+    private bool isAlive;
+    public bool IsAlive { get { return isAlive; } set { isAlive = value; } }
 
-    public bool NPC;
+    [SerializeField]
+    private bool NPC;
+    public bool IsNPC  { get { return NPC; } set { NPC = value; } }
+
+    [SerializeField]
     public string Name;
-    public int maxHealth;
+
+    [SerializeField]
+    private int maxHealth;
+    public int MaxHealth { get { return maxHealth; } set { if (value > 0) maxHealth = value; } }
     int health;
-    public int maxStamina;
+    [SerializeField]
+    private int maxStamina;
+    public int MaxStamina { get { return maxStamina; } set { if (value > 0) maxStamina = value; } }
     int stamina;
-    public int speed;
+
+    [SerializeField][EnumFlag]
+    SkillDamage typeResistance;
+    [SerializeField][EnumFlag]
+    Element elementResistance;
+
+    [SerializeField]
+    private int baseSpeed;
+    int tempSpeed;
+
+    [SerializeField]
+    private int baseAttack;
+    int tempAttack;
+ 
+    [SerializeField]
+    private int baseDefense;
+    int tempDefense;
+
+    [SerializeField]
+    private int baseAccuracy;
+    int tempAccuracy;
+
+    [SerializeField]
+    private int baseEvasion;
+    int tempEvasion;
+ 
+
 
     List<Skill> skills;
+    public List<Skill> Skills { get { return skills; } set { Debug.Log("Don't clear the skills!"); return; } }
 
     [SerializeField]
-    Skill skillOne;
+    Skill skillOne = null;
     [SerializeField]
-    Skill skillTwo;
+    Skill skillTwo = null;
     [SerializeField]
-    Skill skillThree;
+    Skill skillThree = null;
     [SerializeField]
-    Skill skillFour;
+    Skill skillFour = null;
+
+    [SerializeField]
+    List<Status> statuses;
+    [SerializeField]
+    Status intrinsicStatus = null;
 
 
 	// Use this for initialization
 	void Start () {
 
         GC = GameObject.Find("GameControl").GetComponent<GameControl>();
+        GetSoundClips();
+        SetCanvasElements();
 
+        //Set all the Stats ready, including health and stamina
+        SetStartStats();
+
+        //Add intrinsic will reset the status list to blank and add the set intrinsic
+        AddIntrinsic();
+        SetSkills();
+
+        isAlive = true;
+
+
+
+	}
+
+    void SetCanvasElements()
+    {
         //Canvas elements - get all the texts from the children
         Text[] canvasElements = gameObject.GetComponentsInChildren<Text>();
-        foreach(Text t in canvasElements)
+        foreach (Text t in canvasElements)
         {
             //health text object
             if (t.gameObject.name == "TextHealth")
@@ -49,29 +119,45 @@ public class Character : MonoBehaviour {
             {
                 staminaText = t;
             }
-        }
-
-        //create the skill list from the set skills
-        skills = new List<Skill>();
-        skills.Add(Instantiate(skillOne));
-        skills.Add(skillTwo);
-        skills.Add(skillThree);
-        skills.Add(skillFour);
-        //Set this character as the owner for each copy of these skills
-        foreach (Skill s in skills)
-        {
-            if (s != null)
+            if (t.gameObject.name == "TextAttack")
             {
-                s.SetOwner(this);
+                attackText = t;
+            }
+            if (t.gameObject.name == "TextDefense")
+            {
+                defenseText = t;
+            }
+            if (t.gameObject.name == "TextAccuracy")
+            {
+                accuracyText = t;
+            }
+            if (t.gameObject.name == "TextEvasion")
+            {
+                evasionText = t;
+            }
+            if (t.gameObject.name == "TextSpeed")
+            {
+                speedText = t;
             }
         }
+    }
 
-        isAlive = true;
-
-        //Set all the Stats ready
-        SetHealth(maxHealth);
-        SetStamina(maxStamina);
-	}
+    void GetSoundClips()
+    {
+        AudioSource[] clips = gameObject.GetComponents<AudioSource>();
+        if(clips.Length > 0)
+        {
+            IdleSound = clips[0];
+        }
+        if(clips.Length > 1)
+        {
+            HurtSound = clips[1];
+        }
+        if (clips.Length > 2)
+        {
+            BuffSound = clips[2];
+        }
+    }
 
 
     void Update()
@@ -79,6 +165,11 @@ public class Character : MonoBehaviour {
         //update the canvas elements to reflect the characters current stats
         healthText.text = "Health: " + health.ToString();
         staminaText.text = "Stamina " + stamina.ToString();
+        if(attackText != null) { attackText.text = "Atk: " + tempAttack.ToString(); }
+        if (defenseText != null) { defenseText.text = "Def: " + tempDefense.ToString(); }
+        if (accuracyText != null) { accuracyText.text = "Acc: " + tempAccuracy.ToString(); }
+        if (evasionText != null) { evasionText.text = "Eva: " + tempEvasion.ToString(); }
+        if (speedText != null) { speedText.text = "Spd: " + tempSpeed.ToString(); }
     }
 
     void OnMouseDown()
@@ -92,6 +183,212 @@ public class Character : MonoBehaviour {
     //
     //GET AND SET METHODS
     //
+    void AddIntrinsic()
+    {
+        statuses = new List<Status>();
+        if(intrinsicStatus != null)
+        {
+            statuses.Add(Instantiate(intrinsicStatus));
+            foreach (Status s in statuses)
+            {
+                s.SetOwner(this);
+            }
+        }        
+    }
+
+    void SetSkills()
+    {
+        //create the skill list from the set skills
+        skills = new List<Skill>();
+
+        //Add the skill if there is one to add from prefabs
+        //if there isn't, add a null skill to keep numbering correct
+        if(skillOne != null)
+        {
+            try
+            {
+                skills.Add(Instantiate(skillOne));
+            }
+            catch
+            {
+                //prefab didn't exist, don't freak out
+                Debug.Log("Skill does not exist.");
+                skills.Add(null);
+            }            
+        }
+        else
+        {
+            skills.Add(null);
+        }
+        //  ///////////////////////////////////////////
+        if(skillTwo != null)
+        {
+            try
+            {
+                skills.Add(Instantiate(skillTwo));
+            }
+            catch
+            {
+                //prefab didn't exist, don't freak out
+                Debug.Log("Skill does not exist.");
+                skills.Add(null);
+            }
+        }
+        else
+        {
+            skills.Add(null);
+        }
+        // ////////////////////////////////////////////
+        if (skillThree != null)
+        {
+            try
+            {
+                skills.Add(Instantiate(skillThree));
+            }
+            catch
+            {
+                //prefab didn't exist, don't freak out
+                Debug.Log("Skill does not exist.");
+                skills.Add(null);
+            }
+        }
+        else
+        {
+            skills.Add(null);
+        }
+        // ///////////////////////////////////////////
+        if (skillFour != null)
+        {
+            try
+            {
+                skills.Add(Instantiate(skillFour));
+            }
+            catch
+            {
+                //prefab didn't exist, don't freak out
+                Debug.Log("Skill does not exist.");
+                skills.Add(null);
+            }
+        }
+        else
+        {
+            skills.Add(null);
+        }
+                
+        //Set this character as the owner for each copy of these skills
+        foreach (Skill s in skills)
+        {
+            if (s != null)
+            {
+                s.SetOwner(this);
+            }
+        }
+    }
+
+
+    //
+    //Stat methods
+    //
+
+    public void SetStartStats()
+    {
+        //called when the player is first created, to set all the stats to the base numbers correctly
+        NormalizeAttack();
+        NormalizeAccuracy();
+        NormalizeDefense();
+        NormalizeEvasion();
+        NormalizeSpeed();
+
+        SetHealth(maxHealth);
+        SetStamina(maxStamina);
+    }
+
+    public void ChangeAttack(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempAttack += System.Convert.ToInt32(change * baseAttack);
+        }
+        else
+        {
+            tempAttack += System.Convert.ToInt32(change);
+        }        
+    }
+
+    public void ChangeDefense(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempDefense += System.Convert.ToInt32(change * baseDefense);
+        }
+        else
+        {
+            tempDefense += System.Convert.ToInt32(change);
+        }
+    }
+
+    public void ChangeAccuracy(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempAccuracy += System.Convert.ToInt32(change * baseAccuracy);
+        }
+        else
+        {
+            tempAccuracy += System.Convert.ToInt32(change);
+        }
+    }
+
+    public void ChangeEvasion(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempEvasion += System.Convert.ToInt32(change * baseEvasion);
+        }
+        else
+        {
+            tempEvasion += System.Convert.ToInt32(change);
+        }
+    }
+
+    public void ChangeSpeed(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempSpeed += System.Convert.ToInt32(change * baseSpeed);
+        }
+        else
+        {
+            tempSpeed += System.Convert.ToInt32(change);
+        }
+    }
+
+    public void NormalizeAttack()
+    {
+        tempAttack = baseAttack;
+    }
+    public void NormalizeDefense()
+    {
+        tempDefense = baseDefense;
+    }
+    public void NormalizeAccuracy()
+    {
+        tempAccuracy = baseAccuracy;
+    }
+    public void NormalizeEvasion()
+    {
+        tempEvasion = baseEvasion;
+    }
+    public void NormalizeSpeed()
+    {
+        tempSpeed = baseSpeed;
+    }
+
+    public int GetSpeed()
+    {
+        return tempSpeed;
+    }
+
     void SetHealth(int newHealth)
     {
         health = newHealth;
@@ -100,11 +397,6 @@ public class Character : MonoBehaviour {
     public int GetHealth()
     {
         return health;
-    }
-
-    public int GetMaxHealth()
-    {
-        return maxHealth;
     }
 
     void SetStamina(int newStamina)
@@ -117,18 +409,135 @@ public class Character : MonoBehaviour {
         return stamina;
     }
 
-    public int GetMaxStamina()
-   {
-       return maxStamina;
-   }
-
     //
     //UTILITY METHODS
     //
 
-    public void DamageHealth(int change)
+   public void AddStatus(Status newStatus)
     {
-        health -= change;
+        //add stacking later
+        int totalStack = 0;
+        foreach(Status s in statuses)
+        {
+            if(s.Name == newStatus.Name)
+            {
+                //they already have one of these statuses
+                totalStack++;
+            }
+        }
+
+        if(totalStack < newStatus.Stack)
+        {
+            //they don't have too many, so add the new one
+            Status statusToAdd = Instantiate(newStatus);
+            statusToAdd.SetOwner(this);
+            statuses.Add(statusToAdd);
+
+        }
+    }
+
+    public void RemoveStatus(Status toRemove)
+    {
+        for(int i = statuses.Count; i > 0; i--)
+        {
+            //remove the status if it is the one we're looking for
+            if(statuses[i-1].GetType() == toRemove.GetType())
+            {
+                statuses.RemoveAt(i-1);
+            }
+        }
+    }
+
+    public void RemoveAllStatus(StatusType typeToRemove)
+    {
+        for (int i = statuses.Count; i > 0; i--)
+        {
+            //remove the status if it is the type we're looking for
+            if (statuses[i - 1].Type == typeToRemove)
+            {
+                statuses.RemoveAt(i - 1);
+            }
+        }
+    }
+
+
+
+    public void Rest()
+    {
+        AddStamina(66, true);
+        //Debug.Log(this.Name + " rested this turn. (heal stamina or whatever)");
+        StartCoroutine(EndMyTurn());
+    }
+
+   public void Retaliate(int skillNum)
+    {
+        //don't let them retaliate against themself
+        if (GC.GetCurrentCharacter() != this)
+        {
+            //make sure we have a skill to be used, heree
+            if (skillNum <= skills.Count - 1)
+            {
+                Skill RetaliationSkill = skills[skillNum];
+                //have the retaliator play their animation and sound
+                RetaliationSkill.PlaySound();
+
+                switch (RetaliationSkill.type)
+                {
+                    case SkillType.melee:
+                        StartCoroutine(this.PlayAnimation("Melee"));
+                        break;
+                    case SkillType.ranged:
+                        StartCoroutine(this.PlayAnimation("Ranged"));
+                        break;
+                    case SkillType.self:
+                        StartCoroutine(this.PlayAnimation("Buff"));
+                        break;
+                }
+                //do the do (attack the current character as this character retaliating)
+                StartCoroutine(GC.GetCurrentCharacter().AsTarget(this, RetaliationSkill));
+            }
+        }
+    }
+
+   public void LoseTurn()
+    {
+        GC.LoseTurn(this);
+    }
+
+    public void AddTurn()
+    {
+        GC.AddTurn(this);
+    }
+
+    public void DamageHealth(double change, Element elements = Element.N,
+        SkillDamage damageType = SkillDamage.none, bool asPercent = false)
+    {
+        //check the resistances, set so that one resistance in each type
+        //will give the full quater resistance. Doubles do not stack.
+        double resistMod = 0;
+        if(typeResistance != SkillDamage.none && (typeResistance & damageType) != 0)
+        {
+            resistMod += 0.25;
+        }
+        if (elementResistance != Element.N && (elementResistance & elements) != 0)
+        {
+            resistMod += 0.25;
+        }
+
+        //incorporate the resistances
+        if(resistMod != 0) { change *= resistMod; }
+
+        //figure out the damage
+        if (asPercent)
+        {
+            health -= System.Convert.ToInt32(change * maxHealth);
+        }
+        else
+        {
+            health -= System.Convert.ToInt32(change);
+        }
+        
+        //deathcheck
         if (health <= 0)
         {
             Debug.Log(this.Name + " is dead!");
@@ -136,39 +545,65 @@ public class Character : MonoBehaviour {
         }
     }
 
-    public void AddHealth(int change)
+    public void AddHealth(double change, bool asPercent = false)
     {
-        int tempHealth = health + change;
+        int tempHealth;
+        if (asPercent)
+        {
+            //add hp as a percentage as the maxhealth
+            tempHealth = health + System.Convert.ToInt32(maxHealth * change);
+        }
+        else
+        {
+            tempHealth = health + System.Convert.ToInt32(change);
+        }
+        
         if ((tempHealth) > maxHealth)
         {
             health = maxHealth;
         }
         else
         {
-            health += change;
+            health += System.Convert.ToInt32(change);
         }
 
     }
 
-    public void DamageStamina(int change)
+    public void DamageStamina(double change, bool asPercent = false)
     {
-        stamina -= change;
+        if (asPercent)
+        {
+            stamina -= System.Convert.ToInt32(maxStamina * change);
+        }
+        else
+        {
+            stamina -= System.Convert.ToInt32(change);
+        }        
         if (stamina < 0)
         {
             stamina = 0;
         }
     }
 
-    public void AddStamina(int change)
+    public void AddStamina(double change, bool asPercent = false)
     {
-        int tempStamina = stamina + change;
+        int tempStamina;
+        if (asPercent)
+        {
+            tempStamina = stamina + System.Convert.ToInt32(maxStamina * change);
+        }
+        else
+        {
+            tempStamina = stamina + System.Convert.ToInt32(change);
+        }
+
         if (tempStamina > maxStamina)
         {
             stamina = maxStamina;
         }
         else
         {
-            stamina += change;
+            stamina += tempStamina;
         }
     }
 
@@ -176,42 +611,105 @@ public class Character : MonoBehaviour {
     {
         //Debug.Log(Name + " was targted by "+attacker.Name+" for the skill "+skillUsed.Name);
         //play the get hit animation
-        skillUsed.Activate(this);
-        yield return StartCoroutine(PlayAnimation("Damaged"));
-        
+        if (skillUsed.type == SkillType.self)
+        {
+            yield return StartCoroutine(PlayAnimation("Buff"));
+        }
+        else
+        {
+            yield return StartCoroutine(PlayAnimation("Damaged"));
+        }
+
+        StartCoroutine(skillUsed.Activate(this));
+        CheckStatus(Activation.perTurn);
+     
+    }
+
+    public void NewRound()
+    {
+        //called by GC when the new rounds begin
+        foreach (Status s in statuses)
+        {   //refresh the statuses that work each turn
+            s.RefreshFunctions(Activation.perRound);
+        }
     }
 
     public IEnumerator StartMyTurn()
     {
-        //Debug.Log(Name + " starts their turn.");
+        //Debug.Log(Name + " starts their turn.");       
         //play the idle animation
         yield return StartCoroutine(PlayAnimation("Idle"));
         //look for the player to use a buff or take poison damage
+        CheckStatus(Activation.perTurn);
+
+        //cool down all of the characters skills
+        foreach(Skill s in skills)
+        {
+            if (s != null)
+            {
+                s.Cool();
+            }
+        }
+
         //then tell GC to start the next step.
-        GC.NextStep();
+        if(GC.GetStep() == TurnStep.begin)
+        {
+            GC.NextStep();
+        }
     }
 
     public IEnumerator EndMyTurn()
     {
-        //Debug.Log(Name + " ends their turn.");
-        //look for the player to use a buff or take poison damage
-        //then tell GC to start the next step.
+        yield return new WaitForSeconds(1f);
+        //check for any statuses to run first
+        CheckStatus(Activation.perTurn);
+
+        //Check all their statuses to see if they have expired
+        RemoveOldStatus();
+
+        //look through statuses left that need to refresh
+        foreach (Status s in statuses)
+        {   //refresh the statuses that work each turn
+            s.RefreshFunctions(Activation.perTurn);
+        }
+        //tell the GC we can move one when we're done.
         yield return new WaitForSeconds(1f);
         GC.NextStep();
     }
 
-    public void CheckStatus()
+    public void CheckStatus(Activation typeToActivate)
     {
         //look through the list of all the statuses the player has
         //and activate them at the current step
-        //foreach(Status s in statuses)
+        foreach(Status s in statuses)
+        {
+            if(s.TurnStep == GC.GetStep())
+            {
+                StartCoroutine(s.Activate(typeToActivate));
+            }            
+        }
         //if(s.activateStep == GC.currentStep)
         //s.Activate()
     }
 
-    public List<Skill> GetSkills()
+    public void RemoveOldStatus()
     {
-        return skills;
+        //statuses.Remove(oldStatus);
+        
+        //Debug.Log(Name + " is looking through list of status: "+statuses.Count.ToString());
+        //called by a status when it has run out of time
+        for (int i=statuses.Count; i > 0; i--)
+        {
+            //Debug.Log("Testing status " + (i-1).ToString());
+            if(statuses[i-1].TurnsLeft < 1)
+            {
+                //Debug.Log(Name + " is removing status " + statuses[i-1].Name);
+                statuses[i - 1].Remove();
+                statuses.Remove(statuses[i-1]);
+                //statuses.RemoveAt(i-1);
+                //Destroy(oldStatus.gameObject);
+            }
+        }
     }
 
     public bool SelectSkill(int skillNumber)
@@ -241,6 +739,7 @@ public class Character : MonoBehaviour {
         //skill selected, move on to finding a target
     }
 
+
     public IEnumerator PlayAnimation(string animationName)
     {
         Animation animation;
@@ -251,14 +750,25 @@ public class Character : MonoBehaviour {
             animation = gameObject.GetComponentInChildren<Animation>();
             animationTime = animation[animationName].length;
             animation.Play(animationName);
+            if(animationName == "Idle")
+            {
+                IdleSound.Play();
+            }
+            if (animationName == "Damaged")
+            {
+                HurtSound.Play();
+            }
+            if (animationName == "Buff")
+            {
+                BuffSound.Play();
+            }
         }
         catch
         {
             Debug.Log("no animation found for current action. " + animationName + " for character " + Name);
             animationTime = 2f;
         }
-
-        yield return new WaitForSeconds(animationTime);
+        yield return new WaitForSeconds(animationTime+0.5f);
         //Debug.Log(animationName + " done playing for " + Name);
 
     }

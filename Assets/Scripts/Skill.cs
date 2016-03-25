@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Skill : MonoBehaviour {
 
     Character owner;
-
+    [SerializeField]
     public string Name;
             
     public SkillType type;
@@ -13,28 +14,31 @@ public class Skill : MonoBehaviour {
     [SerializeField][EnumFlag]
     public SkillDamage damageType;    
     [SerializeField][EnumFlag]
-    public SkillElement damageElement;
+    public Element damageElement;
 
     [SerializeField]
-    int damage;
-    [SerializeField]
-    [Tooltip("Percentage of characters total stamina to use")]
+    List<Function> functionList = new List<Function>();
+
+    [SerializeField][Tooltip("Percentage of characters total stamina to use")]
     double staminaUse;
+    public double StaminaUse { get { return staminaUse; } set { if(value > 0.01) staminaUse = value; } }
 
-	// Use this for initialization
-	void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	
-	}
+    [SerializeField][Tooltip("How many turns a character must wait to use the skill again")]
+    int coolDown;
+    public int CoolDown { get { return coolDown; } set { if (value > 0) coolDown = value; } }
+    int coolDownTimer;
+
+    //the sound effect to play when the character uses this skill
+    AudioSource SFX;
+
+    void Start()
+    {
+        SFX = gameObject.GetComponent<AudioSource>();
+    }
 
     //
     //Get and Set methods
     //
-
     public void SetOwner(Character nOwner)
     {
         owner = nOwner;
@@ -44,33 +48,63 @@ public class Skill : MonoBehaviour {
     //Utility methods
     //
 
-    public void Activate(Character target)
+    public void Cool()
     {
-
-        Debug.Log(owner.Name + " uses " + this.Name + " on " + target.Name);
-
-        //Damaging skill
-        if (damageType != SkillDamage.none)
+        //called at the beginning of a characters turn
+        //to cool a skill down if it was used before and has a timer
+        if(coolDownTimer > 0)
         {
-            target.DamageHealth(damage);
-        }
+            coolDownTimer--;
+        }        
+    }
 
+    public void CoolComplete()
+    {
+        //called to completely cool a skill down
+        //used as part of a refresh skill function
+        coolDownTimer = 0;
+    }
+
+    public void PlaySound()
+    {
+        //play the soundclip
+        if(SFX != null)
+        {
+            SFX.Play();
+        }        
+    }
+
+    public IEnumerator Activate(Character target)
+    {
         //use the owners stamina
         UseStamina();
 
+        //use the verbs functions we gave the skill
+        foreach (Function f in functionList)
+        {
+            f.Activate(target, damageElement, damageType);
+        }
+
+        //set the cooldowntimer, if there is a cool down on the skill
+        coolDownTimer = coolDown;
+
+        yield return new WaitForSeconds(1f);
     }
 
     void UseStamina()
     {
-        int oStamina = owner.GetMaxStamina();
+        int oStamina = owner.MaxStamina;
         int totalStaminaUsed = System.Convert.ToInt32(oStamina / staminaUse);
         owner.DamageStamina(totalStaminaUsed);
     }
 
     public bool CheckStamina()
     {
+        //check to make sure the skill is not on cool down
+        if(coolDownTimer > 0) { return false; }
+
         //get the players max stamina, find the amount each skill use costs
-        int oStamina = owner.GetMaxStamina();
+        int oStamina = owner.MaxStamina;
         int totalStaminaUsed = System.Convert.ToInt32(oStamina / staminaUse);
         //check to see if they have enough stamina to use the skill
         if (totalStaminaUsed <= owner.GetStamina())
@@ -87,9 +121,15 @@ public class Skill : MonoBehaviour {
 
     public enum SkillTarget { self, singleEnemy, singleTeam, allEnemy, allTeam };
     public enum SkillType { self, melee, ranged };
+    public enum SkillMethod { touch, physical, magic, psychic };
 [System.Flags]
-    public enum SkillDamage { none, blunt, pierce, slash, magic};
-    public enum SkillMethod { touch, physical, magic, psychic};
-    public enum SkillElement { earth, wind, water, fire, lite, dark, ice, pois, elec};
+    public enum SkillDamage { none = (1 << 0), blunt = (1 << 1), pierce = (1 << 2), slash = (1 << 3), magic = (1 << 4) };
+//none, earth, water, air, fire, light, dark, psychic, poison, electric, ice
+[System.Flags]
+    public enum Element { N = (1 << 0), E = (1 << 1), W = (1 << 2), A = (1 << 3), F = (1 << 4),
+    L = (1 << 5), D = (1 << 6), Py = (1 << 7), Pn = (1 << 8), El = (1 << 9), I = (1 << 10)};
+
+[System.Flags]
+    public enum AttackFunction { none = (1 << 0), attackHealth = (1 << 1), attackStamina = (1 << 2) };
 
 

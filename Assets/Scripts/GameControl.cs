@@ -6,17 +6,19 @@ using System.Collections.Generic;
 public class GameControl : MonoBehaviour {
 
     UI gui;
-
+    //the current step of the turn, used to tell what we're doing right now
     TurnStep currentStep;
-
+    //all of the characters in the combat
     List<Character> allCharacters;
-
+    //the turn order list, where a characte can have multiple turns
+    List<Character> turnList;
+    // info about the current turn that is being played
     Character currentCharacter;
     List<Skill> currentSkills;
     Skill skillBeingUsed;
-
+    //Are we playing the game right now?
     bool gameStarted;
-
+    //the current turn and the number of characters in easy to digest int format
     int currentTurn;
     int numberOfCharacters;
 
@@ -26,6 +28,7 @@ public class GameControl : MonoBehaviour {
         gui = gameObject.GetComponent<UI>();
         //empties the list
         allCharacters = new List<Character>();
+        turnList = new List<Character>();
         currentSkills = new List<Skill>();
        
         //calls some features that we need to begin, such as finding characters
@@ -47,9 +50,20 @@ public class GameControl : MonoBehaviour {
     //GET AND SET COMMANDS
     //
 
+    public List<Character> GetTurnList()
+    {
+        return turnList;
+    }
+
     public TurnStep GetStep()
     {
         return currentStep;
+    }
+
+    void SetStep(TurnStep newStep)
+    {
+        currentStep = newStep;
+        //NextStep();
     }
 
     public int GetTurn()
@@ -117,7 +131,7 @@ public class GameControl : MonoBehaviour {
 
     void BeginTurn()
     {
-        if (currentTurn < numberOfCharacters)
+        if (currentTurn < turnList.Count-1)
         {
             currentTurn++;
         }
@@ -125,13 +139,37 @@ public class GameControl : MonoBehaviour {
         {
             //set turn counter back to zero because we're at the end of the round
             currentTurn = 0;
+            //new round begins
+            StartRound();
         }
-        currentCharacter = allCharacters[currentTurn];
+        currentCharacter = turnList[currentTurn];
         //put the outline effect on the current character
         HighlightCharacter();
         //call the turn starting stuff from the character
         StartCoroutine(currentCharacter.StartMyTurn());
         //Debug.Log("Beginning turn "+currentTurn.ToString());
+    }
+
+    void StartRound()
+    {
+        //Called from BeginTurn() when turn number is 0(new round)
+        //update the turn order list now for the round, by speed stat
+        //Sort the character list by speed, to see who goes first
+        allCharacters.Sort((x, y) => y.GetSpeed().CompareTo(x.GetSpeed()));
+        //set the turn list to be all of the characters
+        turnList = allCharacters;
+        foreach (Character c in allCharacters)
+        {
+            //if a character has a skill that makes them go more than once, it will activate here
+            c.NewRound();
+        }
+
+        /*for debugging turnlist
+        foreach(Character c in turnList)
+        {
+            Debug.Log("In Turnlist: " + c.Name);
+        }
+        */
     }
 
     void SelectSkill()
@@ -157,6 +195,41 @@ public class GameControl : MonoBehaviour {
     //
     //UTILITY METHODS
     //
+
+    public void Rest()
+    {
+        //The user hit the rest button, skipping turn, etc
+        //make sure the game is started
+        //and that they aren't in the middle of using a skill
+        if (gameStarted && currentStep != TurnStep.target)
+        {
+            currentCharacter.Rest();
+            SetStep(TurnStep.end);
+        }
+    
+    }
+
+    public void LoseTurn(Character character)
+    {
+        if(character == currentCharacter && currentStep == TurnStep.begin)
+        {
+            //they are losing their turn right now
+            SetStep(TurnStep.end);
+        }
+        else
+        {
+            //they aren't taking their turn right now, so just take their next
+            //one out of the turn list this round
+            turnList.Remove(character);
+        }
+        
+    }
+
+    public void AddTurn(Character character)
+    {
+        //put the character into the turn list, default is next in line
+        turnList.Insert(currentTurn+1, character);
+    }
 
     public void UseSkill(int skillNumber)
     {
@@ -191,7 +264,7 @@ public class GameControl : MonoBehaviour {
 
         currentSkills = new List<Skill>();  //empty list
         //look for the skills of the current character
-        currentSkills = currentCharacter.GetSkills();
+        currentSkills = currentCharacter.Skills;
     }
 
     void HighlightCharacter()
@@ -206,7 +279,8 @@ public class GameControl : MonoBehaviour {
     {
         FindCharacters();
         gameStarted = true;
-        currentTurn = -1;        
+        currentTurn = -1;
+        //StartRound();     
         BeginTurn();
     }
 
@@ -222,7 +296,7 @@ public class GameControl : MonoBehaviour {
             {
                 Character foundCharacter = c.GetComponent<Character>();
                 //if there is a living character script attached, add one to the character list
-                if (foundCharacter.isAlive)
+                if (foundCharacter.IsAlive)
                 {
                     allCharacters.Add(foundCharacter);
                     numberOfCharacters++;
@@ -235,7 +309,7 @@ public class GameControl : MonoBehaviour {
         }
 
         //Sort the character list by speed, to see who goes first
-        allCharacters.Sort((x, y) => y.speed.CompareTo(x.speed));
+        allCharacters.Sort((x, y) => y.GetSpeed().CompareTo(x.GetSpeed()));
 
         //Debug.Log("Total characters found: " + numberOfCharacters.ToString());
     }
@@ -253,7 +327,7 @@ public class GameControl : MonoBehaviour {
         {
             case SkillTarget.singleEnemy:
                 //Targetting single enemy
-                if(attacker.NPC != target.NPC)
+                if(attacker.IsNPC != target.IsNPC)
                 {
                     //diff teams, attack
                     targets.Add(target);
@@ -268,7 +342,7 @@ public class GameControl : MonoBehaviour {
                 break;
             case SkillTarget.singleTeam:
                 //Targetting single ally
-                if (attacker.NPC == target.NPC)
+                if (attacker.IsNPC == target.IsNPC)
                 {
                     targets.Add(target);
                     //Debug.Log("target... success");
@@ -282,12 +356,12 @@ public class GameControl : MonoBehaviour {
                 break;
             case SkillTarget.allEnemy:
                 //Targetting all of the enemies
-                if (attacker.NPC != target.NPC)
+                if (attacker.IsNPC != target.IsNPC)
                 {
                     //diff teams, attack
                     foreach (Character t in allCharacters)
                     {
-                        if (attacker.NPC != t.NPC)
+                        if (attacker.IsNPC != t.IsNPC)
                         {
                             targets.Add(t);
                         }
@@ -303,11 +377,11 @@ public class GameControl : MonoBehaviour {
                 break;
             case SkillTarget.allTeam:
                 //Targetting all of your team
-                if (attacker.NPC == target.NPC)
+                if (attacker.IsNPC == target.IsNPC)
                 {
                     foreach (Character t in allCharacters)
                     {
-                        if (attacker.NPC != t.NPC)
+                        if (attacker.IsNPC != t.IsNPC)
                         {
                             targets.Add(t);
                         }
@@ -339,7 +413,9 @@ public class GameControl : MonoBehaviour {
 
         if(success)
         {
-            //play the proper type of animation
+            //play the proper type of animation and sound
+            skillBeingUsed.PlaySound();
+
             switch (skillBeingUsed.type)
             {
                 case SkillType.melee:
