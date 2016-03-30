@@ -13,11 +13,10 @@ public class Character : MonoBehaviour {
 
     Text healthText;
     Text staminaText;
-    Text attackText;
-    Text defenseText;
-    Text accuracyText;
-    Text evasionText;
-    Text speedText;
+    Slider healthSlider;
+    Slider staminaSlider;
+
+    CanvasGroup canvas;
 
     [SerializeField]
     private bool isAlive;
@@ -46,23 +45,31 @@ public class Character : MonoBehaviour {
 
     [SerializeField]
     private int baseSpeed;
-    int tempSpeed;
+    internal int tempSpeed;
 
     [SerializeField]
     private int baseAttack;
-    int tempAttack;
- 
+    internal int tempAttack;
+
+    [SerializeField]
+    private int baseSpirit;
+    internal int tempSpirit;
+
     [SerializeField]
     private int baseDefense;
-    int tempDefense;
+    internal int tempDefense;
+
+    [SerializeField]
+    private int baseWill;
+    internal int tempWill;
 
     [SerializeField]
     private int baseAccuracy;
-    int tempAccuracy;
+    internal int tempAccuracy;
 
     [SerializeField]
     private int baseEvasion;
-    int tempEvasion;
+    internal int tempEvasion;
  
 
 
@@ -88,6 +95,7 @@ public class Character : MonoBehaviour {
 	void Start () {
 
         GC = GameObject.Find("GameControl").GetComponent<GameControl>();
+        canvas = GetComponentInChildren<CanvasGroup>();
         GetSoundClips();
         SetCanvasElements();
 
@@ -106,6 +114,7 @@ public class Character : MonoBehaviour {
 
     void SetCanvasElements()
     {
+        
         //Canvas elements - get all the texts from the children
         Text[] canvasElements = gameObject.GetComponentsInChildren<Text>();
         foreach (Text t in canvasElements)
@@ -119,6 +128,7 @@ public class Character : MonoBehaviour {
             {
                 staminaText = t;
             }
+            /*
             if (t.gameObject.name == "TextAttack")
             {
                 attackText = t;
@@ -138,6 +148,28 @@ public class Character : MonoBehaviour {
             if (t.gameObject.name == "TextSpeed")
             {
                 speedText = t;
+            }
+            if (t.gameObject.name == "TextSpirit")
+            {
+                spiritText = t;
+            }
+            if (t.gameObject.name == "TextWill")
+            {
+                willText = t;
+            }
+            */
+        }
+        
+        Slider[] sliders = gameObject.GetComponentsInChildren<Slider>();
+        foreach(Slider s in sliders)
+        {
+            if(s.gameObject.name == "SliderHealth")
+            {
+                healthSlider = s;
+            }
+            if(s.gameObject.name == "SliderStamina")
+            {
+                staminaSlider = s;
             }
         }
     }
@@ -163,13 +195,18 @@ public class Character : MonoBehaviour {
     void Update()
     {
         //update the canvas elements to reflect the characters current stats
-        healthText.text = "Health: " + health.ToString();
-        staminaText.text = "Stamina " + stamina.ToString();
-        if(attackText != null) { attackText.text = "Atk: " + tempAttack.ToString(); }
-        if (defenseText != null) { defenseText.text = "Def: " + tempDefense.ToString(); }
-        if (accuracyText != null) { accuracyText.text = "Acc: " + tempAccuracy.ToString(); }
-        if (evasionText != null) { evasionText.text = "Eva: " + tempEvasion.ToString(); }
-        if (speedText != null) { speedText.text = "Spd: " + tempSpeed.ToString(); }
+        healthText.text = "Hp: " + health.ToString() + "/" + maxHealth.ToString();
+        staminaText.text = "Sp " + stamina.ToString() + "/" + maxStamina.ToString();
+        //slider bars for health/stamina
+        if(healthSlider != null)
+        {
+            healthSlider.value = ((float)health / (float)maxHealth);
+        }
+        if (staminaSlider != null)
+        {
+            staminaSlider.value = ((float)stamina / (float)maxStamina);
+        }
+
     }
 
     void OnMouseDown()
@@ -178,6 +215,19 @@ public class Character : MonoBehaviour {
         {
             GC.TestTarget(GC.GetCurrentCharacter(), this, GC.GetSkillBeingUsed());
         }
+    }
+
+    void OnMouseExit()
+    {
+        GC.MouseExit();
+        //canvas.alpha = 0;
+        //hide the canvas mouse over info
+    }
+
+    void OnMouseEnter()
+    {
+        //display the mouse over info
+        GC.MouseOver(this);        
     }
 
     //
@@ -298,6 +348,8 @@ public class Character : MonoBehaviour {
         NormalizeDefense();
         NormalizeEvasion();
         NormalizeSpeed();
+        NormalizeWill();
+        NormalizeSpirit();
 
         SetHealth(maxHealth);
         SetStamina(maxStamina);
@@ -362,6 +414,28 @@ public class Character : MonoBehaviour {
             tempSpeed += System.Convert.ToInt32(change);
         }
     }
+    public void ChangeWill(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempWill += System.Convert.ToInt32(change * baseWill);
+        }
+        else
+        {
+            tempWill += System.Convert.ToInt32(change);
+        }
+    }
+    public void ChangeSpirit(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempSpirit += System.Convert.ToInt32(change * baseSpirit);
+        }
+        else
+        {
+            tempSpirit += System.Convert.ToInt32(change);
+        }
+    }
 
     public void NormalizeAttack()
     {
@@ -382,6 +456,14 @@ public class Character : MonoBehaviour {
     public void NormalizeSpeed()
     {
         tempSpeed = baseSpeed;
+    }
+    public void NormalizeSpirit()
+    {
+        tempSpirit = baseSpirit;
+    }
+    public void NormalizeWill()
+    {
+        tempWill = baseWill;
     }
 
     public int GetSpeed()

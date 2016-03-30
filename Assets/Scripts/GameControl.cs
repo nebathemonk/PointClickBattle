@@ -196,6 +196,24 @@ public class GameControl : MonoBehaviour {
     //UTILITY METHODS
     //
 
+    public void MouseOver(Character pTarget)
+    {
+        if(currentStep == TurnStep.target)
+        {
+            //estimate an attack on the character
+        }
+        else
+        {
+            //not targetting, so show the characters info
+            gui.MouseOverUpdate(pTarget);
+        }
+    }
+
+    public void MouseExit()
+    {
+        gui.MouseOverClear();
+    }
+
     public void Rest()
     {
         //The user hit the rest button, skipping turn, etc

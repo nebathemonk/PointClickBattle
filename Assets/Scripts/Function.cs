@@ -68,7 +68,7 @@ public class Function{
                     switch (stat)
                     {
                         case Stat.attack:
-                            target.ChangeAttack(amount, asPercent);
+                            target.ChangeAttack(amount * -1, asPercent);
                             break;
                         case Stat.defense:
                             break;
@@ -89,6 +89,7 @@ public class Function{
                     switch (stat)
                     {
                         case Stat.attack:
+                            target.ChangeAttack(amount, asPercent);
                             break;
                         case Stat.defense:
                             break;

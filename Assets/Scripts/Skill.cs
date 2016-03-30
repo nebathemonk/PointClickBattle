@@ -98,6 +98,11 @@ public class Skill : MonoBehaviour {
         owner.DamageStamina(totalStaminaUsed);
     }
 
+    public int CheckCool()
+    {
+        return coolDownTimer;
+    }
+
     public bool CheckStamina()
     {
         //check to make sure the skill is not on cool down
@@ -128,8 +133,5 @@ public class Skill : MonoBehaviour {
 [System.Flags]
     public enum Element { N = (1 << 0), E = (1 << 1), W = (1 << 2), A = (1 << 3), F = (1 << 4),
     L = (1 << 5), D = (1 << 6), Py = (1 << 7), Pn = (1 << 8), El = (1 << 9), I = (1 << 10)};
-
-[System.Flags]
-    public enum AttackFunction { none = (1 << 0), attackHealth = (1 << 1), attackStamina = (1 << 2) };
 
 
