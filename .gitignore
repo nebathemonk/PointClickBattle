@@ -10,6 +10,9 @@ ehthumbs.db
 *.csproj
 *.sln
 
+#other things we don't want
+*.pdb
+
 
 # Folder config file
 Desktop.ini
