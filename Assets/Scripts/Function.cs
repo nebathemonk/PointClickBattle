@@ -19,11 +19,19 @@ public class Function{
     [SerializeField][Tooltip("Check to use amount as percent, useful for drain attacks")]
     bool asPercent;
 
+    [SerializeField][Tooltip("The chance that the function will critical hit")]
+    double critRate;
+
     [SerializeField][Tooltip("The stat the function will effect or use, depending")]
     Stat stat;
 
     [SerializeField][Tooltip("This is the status to add or remove")]
     Status statusEffect;
+
+    public Verb GetVerb()
+    {
+        return actionVerb;
+    }
 
     public void Reset()
     {
@@ -47,22 +55,14 @@ public class Function{
         return false;
     }
 
-    public void Activate(Character target, Element elements = Element.N,
+    public void Activate(Character user, Character target, Element elements = Element.N,
         SkillDamage damageType = SkillDamage.none)
     {
         //roll the check to see if the function activates
-        if (RollChance())
+        if (RollChance() && actionVerb != Verb.damage)
         {
             switch (actionVerb)
             {
-                //Damage damages health
-                case Verb.damage:
-                    if (amount > 0)
-                    {
-                        target.DamageHealth(amount, elements, damageType, asPercent);
-                    }
-                    break;
-
                 //drain will hurt a stat
                 case Verb.drain:
                     switch (stat)
@@ -170,7 +170,37 @@ public class Function{
 
             //Activated this turn
             hasActivated = true;
-        }   //end of roll check        
+        }   //end of roll check 
+
+
+        //This was an attack function, so we skip that activating stuff
+        else
+        {
+            if(actionVerb == Verb.damage && amount > 0)
+            {
+                //call the C method to find check if we hit, and how much damage we do
+                int hit = C.checkHit(user.tempAccuracy, user.tempCritRatio, target.tempEvasion, chance, critRate);
+                if (hit > 0)
+                {
+                    //figure out the damage
+                    int tempDamage = C.Damage((int)amount, user.tempAttack, target.tempDefense, target.tempEvasion);
+                    //check for a critical hit
+                    if (hit > 1)
+                    {
+                        tempDamage = C.CritDamage(tempDamage, 2);
+                    }
+                    //hurt the target
+                    target.DamageHealth(tempDamage, elements, damageType, asPercent);
+                    //call the display to show the damage or MISS
+                }
+                else
+                {
+                    //we missed
+                    target.DamageHealth(0, elements, damageType, asPercent);
+                }
+            }
+        }
+       
     } //end of activation
 
 }//end of class

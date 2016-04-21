@@ -43,7 +43,7 @@ public class Status : MonoBehaviour {
         {
             if (!f.hasActivated && f.ActivateOn == Activation.onSet)
             {
-                f.Activate(owner);
+                f.Activate(owner, owner);
             }
         }
     }
@@ -68,7 +68,7 @@ public class Status : MonoBehaviour {
         {
             if(!f.hasActivated && f.ActivateOn == Activation.onEnd)
             {
-                f.Activate(owner, element);
+                f.Activate(owner, owner, element);
             }
         }
 
@@ -97,7 +97,7 @@ public class Status : MonoBehaviour {
         {
             if (!f.hasActivated && f.ActivateOn == typeToActivate)
             {
-                f.Activate(owner, element);
+                f.Activate(owner, owner, element);
             }
             
         }

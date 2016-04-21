@@ -137,10 +137,10 @@ public class GameControl : MonoBehaviour {
         }
         else
         {
-            //set turn counter back to zero because we're at the end of the round
-            currentTurn = 0;
             //new round begins
             StartRound();
+            //set turn counter back to zero because we're at the end of the round
+            currentTurn = 0;            
         }
         currentCharacter = turnList[currentTurn];
         //put the outline effect on the current character
@@ -150,21 +150,24 @@ public class GameControl : MonoBehaviour {
         //Debug.Log("Beginning turn "+currentTurn.ToString());
     }
 
-    void StartRound()
+    public void StartRound()
     {
+        //Debug.Log("New Round starting");
+        turnList.Clear();
+        turnList = new List<Character>();
         //Called from BeginTurn() when turn number is 0(new round)
         //update the turn order list now for the round, by speed stat
         //Sort the character list by speed, to see who goes first
         allCharacters.Sort((x, y) => y.GetSpeed().CompareTo(x.GetSpeed()));
         //set the turn list to be all of the characters
-        turnList = allCharacters;
+        turnList.AddRange(allCharacters);
         foreach (Character c in allCharacters)
         {
             //if a character has a skill that makes them go more than once, it will activate here
             c.NewRound();
         }
-
-        /*for debugging turnlist
+        /*
+        //for debugging turnlist
         foreach(Character c in turnList)
         {
             Debug.Log("In Turnlist: " + c.Name);
@@ -195,6 +198,26 @@ public class GameControl : MonoBehaviour {
     //
     //UTILITY METHODS
     //
+
+    public void EstimateDamage(Character target)
+    {
+        int newLife;
+        int newStamina;
+        if(skillBeingUsed != null)
+        {
+            foreach(Function f in skillBeingUsed.GetFunctions())
+            {
+                if(f.GetVerb() == Verb.damage)
+                {
+                    //attack damages health, estimate that
+                }
+                if(f.GetVerb() == Verb.damageStamina)
+                {
+                    //attack damages stamina, estimate that
+                }
+            }
+        }
+    }
 
     public void MouseOver(Character pTarget)
     {

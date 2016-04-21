@@ -11,10 +11,15 @@ public class Character : MonoBehaviour {
     AudioSource HurtSound;
     AudioSource BuffSound;
 
+    Text nameText;
     Text healthText;
     Text staminaText;
     Slider healthSlider;
     Slider staminaSlider;
+
+    Text damageDisplay;
+    Vector2 damageDisplayLoc;
+    int displayCounter;
 
     CanvasGroup canvas;
 
@@ -70,6 +75,10 @@ public class Character : MonoBehaviour {
     [SerializeField]
     private int baseEvasion;
     internal int tempEvasion;
+
+    [SerializeField]
+    private double critRatio;
+    internal double tempCritRatio;
  
 
 
@@ -108,8 +117,6 @@ public class Character : MonoBehaviour {
 
         isAlive = true;
 
-
-
 	}
 
     void SetCanvasElements()
@@ -127,6 +134,15 @@ public class Character : MonoBehaviour {
             if (t.gameObject.name == "TextStamina")
             {
                 staminaText = t;
+            }
+            if(t.gameObject.name == "TextName")
+            {
+                nameText = t;
+            }
+            if(t.gameObject.name == "TextDamage")
+            {
+                damageDisplay = t;
+                damageDisplayLoc = transform.position;
             }
             /*
             if (t.gameObject.name == "TextAttack")
@@ -207,6 +223,16 @@ public class Character : MonoBehaviour {
             staminaSlider.value = ((float)stamina / (float)maxStamina);
         }
 
+        if(displayCounter > 0)
+        {
+            displayCounter--;
+            damageDisplay.transform.position = new Vector2(damageDisplay.transform.position.x, damageDisplay.transform.position.y+0.05f);
+        }
+        if(displayCounter == 0)
+        {
+            DisplayClear();
+        }
+
     }
 
     void OnMouseDown()
@@ -226,6 +252,11 @@ public class Character : MonoBehaviour {
 
     void OnMouseEnter()
     {
+        //check to see if they are a possible target
+        //and if they are, estimate some damage on them from the 
+        //selected skill
+
+        //otherwise,
         //display the mouse over info
         GC.MouseOver(this);        
     }
@@ -350,9 +381,24 @@ public class Character : MonoBehaviour {
         NormalizeSpeed();
         NormalizeWill();
         NormalizeSpirit();
+        NormalizeCritRatio();
 
         SetHealth(maxHealth);
         SetStamina(maxStamina);
+
+        nameText.text = Name;
+    }
+
+    public void ChangeCritRatio(double change, bool asPercent = true)
+    {
+        if (asPercent)
+        {
+            tempCritRatio += System.Convert.ToInt32(change * critRatio);
+        }
+        else
+        {
+            tempCritRatio += System.Convert.ToInt32(change);
+        }
     }
 
     public void ChangeAttack(double change, bool asPercent = true)
@@ -437,6 +483,11 @@ public class Character : MonoBehaviour {
         }
     }
 
+    public void NormalizeCritRatio()
+    {
+        tempCritRatio = critRatio;
+    }
+
     public void NormalizeAttack()
     {
         tempAttack = baseAttack;
@@ -494,6 +545,22 @@ public class Character : MonoBehaviour {
     //
     //UTILITY METHODS
     //
+
+    public IEnumerator DisplayDamage(string dmgString)
+    {
+        //set the damage displaying text box to the string
+        //then have it start to float up
+        damageDisplay.text = dmgString;
+
+        damageDisplay.transform.position = damageDisplayLoc;
+        displayCounter = 50;
+        yield return new WaitForEndOfFrame();
+    }
+
+    public void DisplayClear()
+    {
+        damageDisplay.text = null;
+    }
 
    public void AddStatus(Status newStatus)
     {
@@ -594,6 +661,7 @@ public class Character : MonoBehaviour {
     public void DamageHealth(double change, Element elements = Element.N,
         SkillDamage damageType = SkillDamage.none, bool asPercent = false)
     {
+        //int change = System.Convert.ToInt32(amount);
         //check the resistances, set so that one resistance in each type
         //will give the full quater resistance. Doubles do not stack.
         double resistMod = 0;
@@ -607,7 +675,9 @@ public class Character : MonoBehaviour {
         }
 
         //incorporate the resistances
-        if(resistMod != 0) { change *= resistMod; }
+        if(resistMod != 0) { change *= (1-resistMod); }
+
+        change = Mathf.Floor((float)change);
 
         //figure out the damage
         if (asPercent)
@@ -624,6 +694,15 @@ public class Character : MonoBehaviour {
         {
             Debug.Log(this.Name + " is dead!");
             //DeathCheck()?
+        }
+
+        if(change <= 0)
+        {
+            StartCoroutine(DisplayDamage("MISS"));
+        }
+        else
+        {
+            StartCoroutine(DisplayDamage(change.ToString()));
         }
     }
 

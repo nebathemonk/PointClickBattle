@@ -44,6 +44,11 @@ public class Skill : MonoBehaviour {
         owner = nOwner;
     }
 
+    public List<Function> GetFunctions()
+    {
+        return functionList;
+    }
+
     //
     //Utility methods
     //
@@ -82,7 +87,7 @@ public class Skill : MonoBehaviour {
         //use the verbs functions we gave the skill
         foreach (Function f in functionList)
         {
-            f.Activate(target, damageElement, damageType);
+            f.Activate(owner, target, damageElement, damageType);
         }
 
         //set the cooldowntimer, if there is a cool down on the skill

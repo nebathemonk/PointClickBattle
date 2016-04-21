@@ -14,6 +14,8 @@ public class UI : MonoBehaviour {
     Button SkillThreeButton;
     Button SkillFourButton;
 
+    CanvasGroup infoCanvas;
+
     Text attackText;
     Text defenseText;
     Text accuracyText;
@@ -34,6 +36,7 @@ public class UI : MonoBehaviour {
         SkillThreeButton = GameObject.Find("SkillThreeButton").GetComponent<Button>();
         SkillFourButton = GameObject.Find("SkillFourButton").GetComponent<Button>();
 
+        infoCanvas = GameObject.Find("InfoCanvas").GetComponent<CanvasGroup>();
         attackText = GameObject.Find("TextAttackInfo").GetComponent<Text>();
         defenseText = GameObject.Find("TextDefenseInfo").GetComponent<Text>();
         spiritText = GameObject.Find("TextSpiritInfo").GetComponent<Text>();
@@ -41,7 +44,6 @@ public class UI : MonoBehaviour {
         evasionText = GameObject.Find("TextEvasionInfo").GetComponent<Text>();
         accuracyText = GameObject.Find("TextAccuracyInfo").GetComponent<Text>();
         speedText = GameObject.Find("TextSpeedInfo").GetComponent<Text>();
-
     }
 	
 	// Update is called once per frame
@@ -53,8 +55,15 @@ public class UI : MonoBehaviour {
 	
 	}
 
+    public void EstimateUpdate(int possibleHealth, int maxHealth)
+    {
+
+    }
+
     public void MouseOverUpdate(Character c)
     {
+        //make canvas visible
+        infoCanvas.alpha = 1;
         //info stats
         if (attackText != null) { attackText.text = "Atk: " + c.tempAttack.ToString(); }
         if (defenseText != null) { defenseText.text = "Def: " + c.tempDefense.ToString(); }
@@ -67,6 +76,8 @@ public class UI : MonoBehaviour {
 
     public void MouseOverClear()
     {
+        infoCanvas.alpha = 0;
+        /*
         if (attackText != null) { attackText.text = ""; }
         if (defenseText != null) { defenseText.text = ""; }
         if (accuracyText != null) { accuracyText.text = ""; }
@@ -74,6 +85,7 @@ public class UI : MonoBehaviour {
         if (speedText != null) { speedText.text = ""; }
         if (spiritText != null) { spiritText.text = ""; }
         if (willText != null) { willText.text = ""; }
+        */
     }
 
     void turnListUpdate()
@@ -101,7 +113,7 @@ public class UI : MonoBehaviour {
         }
         catch
         {
-            SkillOneButton.GetComponentInChildren<Text>().text = "null";
+            SkillOneButton.GetComponentInChildren<Text>().text = "";
         }
         try
         {
@@ -113,7 +125,7 @@ public class UI : MonoBehaviour {
         }
         catch
         {
-            SkillTwoButton.GetComponentInChildren<Text>().text = "null";
+            SkillTwoButton.GetComponentInChildren<Text>().text = "";
         }
         try
         {
@@ -125,7 +137,7 @@ public class UI : MonoBehaviour {
         }
         catch
         {
-            SkillThreeButton.GetComponentInChildren<Text>().text = "null";
+            SkillThreeButton.GetComponentInChildren<Text>().text = "";
         }
         try
         {
@@ -137,7 +149,7 @@ public class UI : MonoBehaviour {
         }
         catch
         {
-            SkillFourButton.GetComponentInChildren<Text>().text = "null";
+            SkillFourButton.GetComponentInChildren<Text>().text = "";
         }
     }
 }
